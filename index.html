@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><title>RF Web — Teste 3D</title>
+<style>*{box-sizing:border-box}body{margin:0;background:#101a2b;color:#fff;font:14px system-ui;overflow:hidden}canvas{width:100vw;height:100dvh;display:block;touch-action:none}#hud{position:fixed;top:12px;left:12px;padding:12px;background:#0b1735ce;border:1px solid #66ccff88;border-radius:12px;max-width:75vw}#hud strong{color:#bcecff}#hud small{display:block;margin-top:4px}#error{display:none;position:fixed;bottom:10px;left:10px;right:10px;background:#681a2a;padding:14px;border-radius:10px;white-space:pre-wrap}#controls{position:fixed;bottom:16px;left:15px;right:15px;display:flex;justify-content:space-between;pointer-events:none}#pad{display:grid;grid-template-columns:repeat(3,48px);gap:3px;pointer-events:auto}button{border:1px solid #a4dfff;background:#17527fcf;color:white;border-radius:9px;font-weight:bold;min-width:48px;min-height:48px;touch-action:none}#attack{pointer-events:auto;background:#943a79;min-width:80px;border-radius:50%}@media(pointer:fine){#controls{opacity:.5}}</style>
+</head><body><canvas id="game"></canvas><div id="hud"><strong>RF WEB · PRIMEIRO TESTE 3D</strong><small id="status">Carregando motor 3D...</small><small>PC: WASD/setas · Espaço: atacar</small></div><div id="controls"><div id="pad"><span></span><button data-key="w">▲</button><span></span><button data-key="a">◀</button><button data-key="s">▼</button><button data-key="d">▶</button></div><button id="attack">ATACAR</button></div><div id="error"></div>
+<script src="https://cdn.babylonjs.com/babylon.js"></script>
+<script>
+(function(){
+ const status=document.getElementById('status'),err=document.getElementById('error');
+ function fail(e){err.style.display='block';err.textContent='Erro 3D: '+(e&&e.message||e);status.textContent='Falha ao carregar';}
+ window.addEventListener('error',e=>fail(e.error||e.message));
+ window.addEventListener('unhandledrejection',e=>fail(e.reason));
+ try {
+ if(!window.BABYLON)throw Error('Biblioteca 3D não carregou. Verifique a conexão.');
+ const B=BABYLON,canvas=document.getElementById('game'),engine=new B.Engine(canvas,true,{adaptToDeviceRatio:true});
+ const scene=new B.Scene(engine);scene.clearColor=new B.Color4(.48,.70,.87,1);
+ const camera=new B.ArcRotateCamera('cam',-Math.PI/2,1.15,13,new B.Vector3(0,1,0),scene);
+ camera.attachControl(canvas,true);camera.lowerRadiusLimit=6;camera.upperRadiusLimit=20;
+ new B.HemisphericLight('light',new B.Vector3(0,1,0),scene).intensity=.9;
+ const sun=new B.DirectionalLight('sun',new B.Vector3(-1,-2,-1),scene);sun.intensity=.8;
+ function mat(name,c){let m=new B.StandardMaterial(name,scene);m.diffuseColor=B.Color3.FromHexString(c);return m;}
+ const grass=mat('grama','#70AF91'),blue=mat('armadura','#294A80'),cyan=mat('energia','#39D7EE'),red=mat('alvo','#B94E68');
+ const ground=B.MeshBuilder.CreateGround('arena',{width:45,height:45},scene);ground.material=grass;
+ const root=new B.TransformNode('personagem',scene);
+ function box(name,w,h,d,x,y,z,material,parent){const m=B.MeshBuilder.CreateBox(name,{width:w,height:h,depth:d},scene);m.position.set(x,y,z);m.material=material;if(parent)m.parent=parent;return m;}
+ box('corpo',.8,1,.45,0,1.35,0,blue,root);
+ box('cabeca',.55,.55,.55,0,2.15,0,cyan,root);
+ for(const s of [-1,1]){box('braco',.23,.75,.30,s*.55,1.35,0,blue,root);box('perna',.27,.8,.3,s*.22,.45,0,blue,root);}
+ box('espada',.12,1.25,.16,.8,1.1,-.25,cyan,root);
+ const target=B.MeshBuilder.CreateCylinder('robo',{height:1.9,diameter:1.1,tessellation:6},scene);target.position.set(0,.95,-5);target.material=red;
+ for(let i=0;i<14;i++){let rock=B.MeshBuilder.CreateBox('pedra',{size:1},scene);rock.position.set(Math.sin(i*2.2)*15,.25,Math.cos(i*2.2)*15);rock.scaling.set(1.4,.5,1.3);rock.material=blue;}
+ const keys={};window.addEventListener('keydown',e=>{keys[e.key.toLowerCase()]=true;if(e.code==='Space')attack();});window.addEventListener('keyup',e=>keys[e.key.toLowerCase()]=false);
+ document.querySelectorAll('[data-key]').forEach(b=>{const k=b.dataset.key;b.addEventListener('pointerdown',e=>{e.preventDefault();keys[k]=true;b.setPointerCapture(e.pointerId)});['pointerup','pointercancel','lostpointercapture'].forEach(n=>b.addEventListener(n,()=>keys[k]=false))});
+ function attack(){target.scaling.y=.75;setTimeout(()=>{target.scaling.y=1},170);status.textContent='Ataque de teste executado!';}
+ document.getElementById('attack').addEventListener('pointerdown',attack);
+ engine.runRenderLoop(()=>{const dx=(keys.d||keys.arrowright?1:0)-(keys.a||keys.arrowleft?1:0),dz=(keys.s||keys.arrowdown?1:0)-(keys.w||keys.arrowup?1:0);if(dx||dz){const length=Math.hypot(dx,dz);root.position.x+=dx/length*.075;root.position.z+=dz/length*.075;root.rotation.y=Math.atan2(-dx,-dz)}camera.target=B.Vector3.Lerp(camera.target,new B.Vector3(root.position.x,1,root.position.z),.045);scene.render();});
+ window.addEventListener('resize',()=>engine.resize());status.textContent='Cena 3D carregada! Use os controles para andar.';
+ }catch(e){fail(e)}
+})();
+</script></body></html>
